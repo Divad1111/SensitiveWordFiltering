@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using UnityEngine;
 
+[System.Serializable]
 public class WordNode
 {   
     public char word;
@@ -68,10 +70,11 @@ public static class SensitiveWordFiltering
             Debug.LogErrorFormat("文件：{0}内容为空。", cvsFilePath);
             return;
         }
-        Build(fileContent.Split(splitChar));
+
+        Add(fileContent.Split(splitChar));
     }
 
-    public static void Build(string[] sensitiveWords)
+    public static void Add(string[] sensitiveWords)
     {
         if (sensitiveWords == null || sensitiveWords.Length <= 0)
         {
@@ -81,17 +84,17 @@ public static class SensitiveWordFiltering
 
         for (var swsIndex = 0; swsIndex < sensitiveWords.Length; swsIndex++)
         {
-            var words = sensitiveWords[swsIndex];
-            if (string.IsNullOrEmpty(words))
+            var sensitiveWord = sensitiveWords[swsIndex];
+            if (string.IsNullOrEmpty(sensitiveWord))
                 continue;
 
             var curWN = _root;
-            var wordsLength = words.Length;
+            var wordsLength = sensitiveWord.Length;
             for (var wIndex = 0; wIndex < wordsLength; wIndex++)
             {
                 bool isLastWord = wIndex + 1 == wordsLength;
-                var word = words[wIndex];
-                var childWN = curWN.GetChildWordNode(word);
+                var character = sensitiveWord[wIndex];
+                var childWN = curWN.GetChildWordNode(character);
                 if (childWN != null)
                 {
                     if (!childWN.isBreakUpNode)
@@ -100,10 +103,47 @@ public static class SensitiveWordFiltering
                     curWN = childWN;
                 }
                 else
-                {   
-                    curWN = curWN.AddChildWorkNode(word, isLastWord);
+                {
+                    curWN = curWN.AddChildWorkNode(character, isLastWord);
                 }
             }
+        }
+    }
+
+    public static void Serialize(string savedPath)
+    {
+        if (string.IsNullOrEmpty(savedPath))
+        {
+            Debug.LogError($"savedPaht是空。");
+            return;
+        }
+
+        using(var fs = new FileStream(savedPath, FileMode.Create))
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            bf.Serialize(fs, _root);
+        }
+    }
+
+    public static void Deserialize(string filePath)
+    {
+        if(string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+        {
+            Debug.LogError($"文件{filePath}不存在。");
+            return;
+        }
+
+        using (Stream fs = File.OpenRead(filePath))
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            var root = bf.Deserialize(fs) as WordNode;
+            if (root == null)
+            {
+                Debug.LogError("Deserialize 失败。");
+                return;
+            }
+
+            _root = root;
         }
     }
 
