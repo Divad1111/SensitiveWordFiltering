@@ -7,7 +7,7 @@
 ```csharp
 //初始化调用一次
 string[] sensitiveWords = new string[3] { "日", "日本", "日本人" }; //自测试的敏感词而已
-SensitiveWordFiltering.Build(sensitiveWords);
+SensitiveWordFiltering.Add(sensitiveWords);
 
 
 //检查关键字
